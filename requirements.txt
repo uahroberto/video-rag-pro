@@ -1,0 +1,11 @@
+fastapi>=0.109.0
+uvicorn>=0.27.0
+streamlit>=1.30.0
+faster-whisper>=0.10.0  # El motor optimizado [cite: 65]
+qdrant-client>=1.7.0    # Cliente para la DB [cite: 128]
+langchain>=0.1.0
+openai>=1.10.0
+yt-dlp>=2023.11.16      # Descarga de audio
+python-dotenv>=1.0.0
+httpx>=0.26.0           # Peticiones asíncronas
+tiktoken>=0.5.2
