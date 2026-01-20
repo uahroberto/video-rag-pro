@@ -1,0 +1,16 @@
+# Python environment
+venv/
+__pycache__/
+*.pyc
+
+# Sensitive data such as the api key
+.env
+
+# Local Database & Large Files
+qdrant_local_data/
+data/
+*.mp3
+*.mp4
+
+# Model caches (HuggingFace)
+models/
