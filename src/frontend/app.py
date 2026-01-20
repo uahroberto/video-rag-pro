@@ -32,11 +32,19 @@ with st.sidebar:
 col_vid, col_chat = st.columns([1.2, 0.8])
 
 with col_vid:
-    st.subheader("Reproductor")
+    st.subheader("Reproductor Inteligente")
     if url:
-        # Key Hack application
-        st.video(url, start_time=st.session_state.video_start_time, key=st.session_state.video_key)
+        # Aplicamos el Key Hack al CONTENEDOR, no al vídeo directamente
+        with st.container(key=st.session_state.video_key):
+            st.video(
+                url, 
+                start_time=st.session_state.video_start_time
+                # Eliminamos 'key' de aquí para evitar el TypeError
+            )
+    else:
+        st.info("Introduce una URL para comenzar.")
 
+        
 with col_chat:
     st.subheader("Consulta a la IA")
     query = st.text_input("Escribe tu pregunta:")

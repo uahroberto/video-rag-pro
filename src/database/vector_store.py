@@ -13,7 +13,7 @@ class VectorDatabase:
     Uses a local embedding model to keep costs at zero.
     """
 
-    def __init__(self, collection_name: str = "video_knowledge"):
+    def __init__(self, collection_name: str = "video_knowledge"): # Fixed 'ef' to 'def'
         self.collection_name = collection_name
         
         # Load local embedding model (runs on CPU)
@@ -22,7 +22,6 @@ class VectorDatabase:
         self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
         
         qdrant_path = os.getenv("QDRANT_PATH")
-        qdrant_host = os.getenv("QDRANT_HOST")
         
         if qdrant_path:
             self.client = QdrantClient(path=qdrant_path)
