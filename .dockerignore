@@ -1,0 +1,19 @@
+# Ignore the local virtual environment
+venv/
+.venv/
+env/
+
+# Ignore local data and temporary files
+data/
+qdrant_storage/
+__pycache__/
+*.mp3
+*.mp4
+
+# Ignore git history
+.git
+.gitignore
+
+# Ignore model caches if they are in your root
+models/
+.cache/

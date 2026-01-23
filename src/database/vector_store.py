@@ -13,46 +13,59 @@ class VectorDatabase:
     Uses a local embedding model to keep costs at zero.
     """
 
-    def __init__(self, collection_name: str = "video_knowledge"): # Fixed 'ef' to 'def'
+    def __init__(self, collection_name: str = "video_knowledge"): 
         self.collection_name = collection_name
         
-        # Load local embedding model (runs on CPU)
-        # Size 384 matches the collection config
+        # Internal log in English for professional server monitoring
         print("🤖 Loading local embedding model (all-MiniLM-L6-v2)...")
         self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
         
-        qdrant_path = os.getenv("QDRANT_PATH")
+        # Logic: Docker uses QDRANT_HOST, local dev uses QDRANT_PATH
+        qdrant_host = os.getenv("QDRANT_HOST", "localhost")
+        qdrant_port = int(os.getenv("QDRANT_PORT", 6333))
+        # I commented this line out  to remove the dependency on QDRANT_PATH
+        # qdrant_path = os.getenv("QDRANT_PATH")
         
-        if qdrant_path:
-            self.client = QdrantClient(path=qdrant_path)
-        else:
-            self.client = QdrantClient(host=qdrant_host, port=int(os.getenv("QDRANT_PORT", 6333)))
+        
+        # Previous logic was for local dev, now we only use Docker 
+        print(f"🌐 Database Mode: Client-Server ({qdrant_host}:{qdrant_port})")
+
+        try: 
+            self.client = QdrantClient(host=qdrant_host, port=qdrant_port)
+            self.client.get_collections() # Test connection
+        except Exception as e:
+            print(f"Error al conectar con Qdrant: {e}")
+            raise
 
         self._ensure_collection()
 
     def _ensure_collection(self):
-        """Creates the collection if it doesn't exist."""
-        collections = self.client.get_collections().collections
-        if not any(c.name == self.collection_name for c in collections):
-            print(f"🛠️ Creating collection: {self.collection_name}")
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE),
-            )
+        """
+        Checks for collection existence atomically to avoid 409 Conflicts.
+        This ensures idempotency during Streamlit reruns.
+        """
+        # Use the native method to check existence and prevent race conditions
+        if not self.client.collection_exists(self.collection_name):
+        # Frontend-facing or log messages in Spanish
+        print(f"🛠️ Creando colección: {self.collection_name}")
+        
+        self.client.create_collection(
+            collection_name=self.collection_name,
+            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+        )
+    else:
+        # Success message for the user/operator
+        print(f"✅ La colección '{self.collection_name}' ya está lista para su uso.")
+
 
     def upsert_chunks(self, chunks: list[dict], video_id: str):
-        """
-        Converts chunks to vectors and stores them with temporal metadata.
-        """
+        """Converts chunks to vectors and stores them with temporal metadata."""
         print(f"🧠 Vectorizing {len(chunks)} chunks for video {video_id}...")
         
         points = []
         for chunk in chunks:
-            # Generate the semantic vector
             vector = self.encoder.encode(chunk['text']).tolist()
             
-            # Create a unique point with metadata (Payload)
-            # Metadata is critical for the front-end to jump to the right timestamp
             points.append(PointStruct(
                 id=str(uuid.uuid4()),
                 vector=vector,
@@ -71,19 +84,14 @@ class VectorDatabase:
         print("✅ Vectors successfully stored in Qdrant.")
 
     def search(self, query: str, limit: int = 3):
-        """
-        Finds the most relevant video segments using the modern query_points API.
-        """
-        # Generate the embedding for the user's question
+        """Finds relevant segments using the modern query_points API."""
         query_vector = self.encoder.encode(query).tolist()
         
-        # In modern Qdrant, query_points is the preferred method over search()
-        # It provides better performance and a unified interface [Source 8, 16]
+        # Using modern unified API for high performance
         response = self.client.query_points(
             collection_name=self.collection_name,
             query=query_vector,
             limit=limit
         )
         
-        # We extract the payload from the resulting points
         return [hit.payload for hit in response.points]

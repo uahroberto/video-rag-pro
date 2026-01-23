@@ -8,8 +8,7 @@ def main():
     print("--- 🛠️ Initializing full local pipeline ---")
     transcriber = VideoTranscriber()
     chunker = ChunkingProcessor(min_chunk_size=600)
-    
-    # This loads the embedding model into your 16GB RAM
+
     db = VectorDatabase() 
     
     url = "https://youtu.be/7r2xz7tKY24?si=J5Oj-VJQ8u9ZOADe"
@@ -23,11 +22,11 @@ def main():
     segments = transcriber.transcribe(audio_path)
     
     # 2. Chunking (Structured Aggregation)
-    # Essential to preserve temporal metadata [Source 9, 15]
+    # Essential to preserve temporal metadata
     chunks = chunker.process(segments)
     
     # 3. Vectorization & Storage
-    # This uses your CPU to create embeddings at zero cost [Source 25]
+    # This uses your CPU to create embeddings at zero cost
     print(f"\n--- 🧠 Phase 2: Vectorizing {len(chunks)} chunks ---")
     db.upsert_chunks(chunks, video_id)
     

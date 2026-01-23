@@ -1,0 +1,43 @@
+services:
+  # Service 1: The Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_db
+    ports:
+      # Qdrant port -> any traffic to this port (localhost:6333) is forwarded to the container
+      - "6333:6333"
+    volumes:
+      # To ensure data persistence: even if the container stops, the vectors are safe
+      - ./qdrant_storage:/qdrant/storage:Z # Z is for SELinux because even though I fixed permissions issues, SELinux blocks the access
+
+    healthcheck:
+      # Feature added after deploy errors such as "Name or service not known"
+      # I had to replace "curl" because it was not working. Addint it may compromise the security of the container 
+      # Adding the curl command to the healthcheck may be a security risk, as it could allow an attacker to access the container's network.
+      test: [ "CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rag_network
+
+  # Service 2: Your Video RAG Application
+  app:
+    build: .
+    container_name: video_rag_app
+    ports:
+      - "8501:8501"
+    environment:
+      # CRITICAL: We point to the service name 'qdrant', not 'localhost'
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      qdrant:
+        condition: service_healthy # Service must be healthy to start (aligns with healthcheck created after deploy errors)
+    networks:
+      - rag_network
+
+networks:
+  rag_network:
+    driver: bridge

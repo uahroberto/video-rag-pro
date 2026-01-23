@@ -98,3 +98,13 @@ class VideoTranscriber:
             print(f"[{segment.start:.2f}s -> {segment.end:.2f}s] {segment.text}")
 
         return results
+
+    # Just to keep the server clean
+    def cleanup_temp_files(file_path: str):
+        """Removes temporary audio files to save disk space."""
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"🧹 Maintenance: Cleaned up {file_path}")
+        except Exception as e:
+            print(f"⚠️ Maintenance Warning: Could not delete {file_path}: {e}")
