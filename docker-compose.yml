@@ -12,7 +12,7 @@ services:
 
     healthcheck:
       # Feature added after deploy errors such as "Name or service not known"
-      # I had to replace "curl" because it was not working. Addint it may compromise the security of the container 
+      # I had to replace "curl" because it was not working.
       # Adding the curl command to the healthcheck may be a security risk, as it could allow an attacker to access the container's network.
       test: [ "CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1" ]
       interval: 5s

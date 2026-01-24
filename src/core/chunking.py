@@ -14,7 +14,7 @@ class ChunkingProcessor:
         self.min_chunk_size = min_chunk_size
         self.overlap_segments = overlap_segments
 
-    def process(self, segments: list[dict]) -> list[dict]:
+    def create_chunks(self, segments: list[dict]) -> list[dict]:
         """
         Groups atomic segments into larger chunks with precise start/end timestamps.
         Implements 'Structured Aggregation' as per architectural validation.

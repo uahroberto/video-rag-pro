@@ -14,7 +14,7 @@ class VideoTranscriber:
 
     def __init__(self):
         # Load configuration from .env
-        self.model_size = os.getenv("WHISPER_MODEL_SIZE", "small")
+        self.model_size = os.getenv("WHISPER_MODEL_SIZE", "base")
         self.device = os.getenv("WHISPER_DEVICE", "cpu")
         self.compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
         

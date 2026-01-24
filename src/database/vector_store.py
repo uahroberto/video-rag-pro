@@ -46,16 +46,16 @@ class VectorDatabase:
         """
         # Use the native method to check existence and prevent race conditions
         if not self.client.collection_exists(self.collection_name):
-        # Frontend-facing or log messages in Spanish
-        print(f"🛠️ Creando colección: {self.collection_name}")
+            # Frontend-facing or log messages in Spanish
+            print(f"🛠️ Creando colección: {self.collection_name}")
         
-        self.client.create_collection(
-            collection_name=self.collection_name,
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
-        )
-    else:
-        # Success message for the user/operator
-        print(f"✅ La colección '{self.collection_name}' ya está lista para su uso.")
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+            )
+        else:
+            # Success message for the user/operator
+            print(f"✅ La colección '{self.collection_name}' ya está lista para su uso.")
 
 
     def upsert_chunks(self, chunks: list[dict], video_id: str):
