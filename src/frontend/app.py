@@ -6,159 +6,148 @@ from src.database.vector_store import VectorDatabase
 from src.core.rag_engine import RAGEngine
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="Video RAG Pro", layout="wide")
+st.set_page_config(
+    page_title="Video RAG Assistant", 
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded" # Force sidebar open for video player
+)
 
 # --- HELPER FUNCTIONS ---
 def format_time(seconds: float) -> str:
-    """Converts seconds to MM:SS format for better UX."""
+    """Converts seconds to MM:SS format."""
     minutes = int(seconds // 60)
     secs = int(seconds % 60)
     return f"{minutes:02d}:{secs:02d}"
 
-# --- SESSION STATE INITIALIZATION ---
-# Created because Streamlit reruns the app.py file on every interaction
-
-# 1. Video Player State
+# --- SESSION STATE ---
 if 'video_start_time' not in st.session_state:
     st.session_state.video_start_time = 0
 if 'video_key' not in st.session_state:
     st.session_state.video_key = str(uuid.uuid4())
 
-# 2. Chat History State (New for Modern UI)
-# We store the entire conversation history here to emulate a real chatbot experience
+# HISTORY STRUCTURE CHANGE:
+# We now store: {'role': '...', 'content': '...', 'sources': [...]} 
+# This allows rendering buttons for OLD messages too.
 if 'messages' not in st.session_state:
     st.session_state.messages = []
 
-# 3. Persistence for Interactive Buttons
-# Stores the sources of the LAST answer to keep buttons visible during reruns
-if 'current_sources' not in st.session_state:
-    st.session_state.current_sources = []
-
-# 4. Raw Transcript Storage
-# To enable the 'View Full Transcript' feature without re-processing
 if 'full_transcript' not in st.session_state:
     st.session_state.full_transcript = ""
 
 def seek_video(seconds):
     """Updates the video pointer and forces a widget refresh."""
-    # Internal log to track user interaction
-    print(f"UI: Seeking video to {seconds} seconds") 
     st.session_state.video_start_time = seconds
     st.session_state.video_key = str(uuid.uuid4())
+    # Crucial: We don't want to lose the chat history on rerun
+    # (Streamlit handles session_state persistence automatically)
 
-# --- MAIN TITLE ---
-st.title("🧠 Video RAG Assistant")
+# --- MAIN LAYOUT ---
 
-# --- SIDEBAR: CONTENT INGESTION ---
+# 1. SIDEBAR: VIDEO PLAYER & CONTROLS (The "Sticky" Element)
 with st.sidebar:
-    st.header("1. Cargar Contenido")
-    # Using unique keys to prevent input swapping between URL and Chat
-    input_url = st.text_input("Enlace de YouTube", key="url_input")
-
-    # Logic Gate: Processing only triggers on button click to save resources
-    if st.button("Procesar Vídeo", type="primary"):
+    st.title("📺 Panel de Control")
+    
+    # Input Section
+    input_url = st.text_input("URL de YouTube", key="url_input")
+    
+    if st.button("🚀 Procesar Vídeo", type="primary", use_container_width=True):
         if input_url:
-            with st.status("Analizando contenido...", expanded=True) as status:
-                # Step 1: Download Audio
-                status.write("📥 Descargando audio de YouTube...")
-                transcriber = VideoTranscriber() # Created in src/core/transcriber.py
+            with st.status("Analizando vídeo...", expanded=True) as status:
+                transcriber = VideoTranscriber()
+                status.write("📥 Descargando...")
                 audio_path, video_title = transcriber.download_audio(input_url)
                 
-                # Step 2: Transcription (Whisper)
-                # Note: Using 'base' model for speed as per Phase 1 optimization
-                status.write("⚡ Transcribiendo audio...")
+                status.write("⚡ Transcribiendo (Modo Rápido)...")
                 raw_segments = transcriber.transcribe(audio_path)
                 
-                # Feature: Save full text for manual inspection
-                full_text = " ".join([seg['text'] for seg in raw_segments])
-                st.session_state.full_transcript = full_text
+                # Save full text for the 'Copy' feature
+                st.session_state.full_transcript = " ".join([s['text'] for s in raw_segments])
 
-                # Step 3: Chunking
-                status.write("🧩 Generando fragmentos de conocimiento...")
                 processor = ChunkingProcessor()
                 chunks = processor.create_chunks(raw_segments)
                 
-                # Step 4: Vector Storage (Qdrant)
-                status.write("💾 Vectorizando en Qdrant...")
                 db = VectorDatabase()
                 db.upsert_chunks(chunks, input_url)
                 
-                status.update(label="✅ Vídeo Indexado y Listo", state="complete")
+                status.update(label="✅ Indexado Completo", state="complete")
         else:
-            st.error("Por favor, introduce una URL válida.")
+            st.error("URL no válida")
 
-    # Extra Feature: Raw Text Viewer
-    # Useful if the user wants to read instead of chat
-    if st.session_state.full_transcript:
-        with st.expander("📄 Ver Transcripción Completa"):
-            st.text_area("", st.session_state.full_transcript, height=300)
-
-# --- LAYOUT DEFINITION ---
-# We split the screen: 60% for video (1.5), 40% for chat (1.0)
-col_vid, col_chat = st.columns([1.5, 1.0])
-
-# --- VIDEO COLUMN: Only depends on URL ---
-with col_vid:
-    # Condition: Only requires a valid URL string to render the player
-    if input_url and input_url.startswith("http"):
-        # We wrap the video in a container with a dynamic key to force refreshes
-        with st.container(key=st.session_state.video_key):
-            st.video(input_url, start_time=st.session_state.video_start_time)
-    else:
-        st.info("👈 Carga un vídeo para comenzar.")
-
-# --- CHAT COLUMN: Modern Chatbot UI ---
-with col_chat:
-    st.subheader("Chat Inteligente")
+    st.markdown("---")
     
-    # 1. DISPLAY CHAT HISTORY
-    # Iterate through session state to render previous messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    # VIDEO PLAYER (Fixed in Sidebar)
+    # This solves the issue of the video scrolling away
+    if input_url and input_url.startswith("http"):
+        st.subheader("Reproductor")
+        with st.container(key=st.session_state.video_key):
+            # autoplay=True lets the video start playing as soon as the timestamp button is clicked
+            st.video(input_url, start_time=st.session_state.video_start_time, autoplay = True)
+    
+    # TRANSCRIPT FEATURE (Better UI)
+    if st.session_state.full_transcript:
+        with st.expander("📄 Ver Transcripción"):
+           # UX FIX: Replaced st.code with st.text_area to avoid horizontal scrolling.
+            # height=400 gives a good reading viewport.
+            st.text_area(
+                "Texto Completo", 
+                st.session_state.full_transcript, 
+                height=400,
+                help="Puedes copiar el texto seleccionándolo."
+            )
 
-    # 2. PERSISTENT TIMESTAMPS (Interactive Layer)
-    # These buttons appear below the history but above the input box.
-    # They relate to the LAST answer provided by the AI.
-    if st.session_state.current_sources:
-        st.caption("📍 Momentos clave relacionados:")
-        cols = st.columns(3) # Grid layout for buttons
-        for i, seg in enumerate(st.session_state.current_sources):
-            # UX: Format time to MM:SS
-            time_label = format_time(seg['start'])
-            with cols[i % 3]:
-                # Logic: Clicking triggers 'seek_video' which refreshes the player
-                if st.button(f"▶ {time_label}", key=f"btn_{i}", help="Saltar a este momento"):
+# 2. MAIN AREA: CHAT INTERFACE
+st.title("🧠 Asistente de Vídeo")
+
+# Render History
+for i, message in enumerate(st.session_state.messages):
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        
+        # TIMESTAMPS LOGIC (Integrated in history)
+        # Check if this specific message has associated sources
+        if "sources" in message and message["sources"]:
+            st.caption("📍 Momentos clave:")
+            # We use a small grid for buttons
+            cols = st.columns(4)
+            for j, seg in enumerate(message["sources"]):
+                time_label = format_time(seg['start'])
+                # Unique key is essential: msg_index + btn_index
+                if cols[j % 4].button(f"▶ {time_label}", key=f"hist_{i}_{j}"):
                     seek_video(seg['start'])
 
-    # 3. CHAT INPUT (The Trigger)
-    # st.chat_input replaces st.form for a more modern feel
-    if prompt := st.chat_input("Pregunta sobre el vídeo..."):
-        if not input_url:
-            st.error("⚠️ Primero debes procesar un vídeo.")
-        else:
-            # A. Append User Message to History
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
+# Chat Input (Always at bottom)
+if prompt := st.chat_input("Pregunta sobre el vídeo..."):
+    if not input_url:
+        st.toast("⚠️ Por favor, carga un vídeo primero.", icon="🚨")
+    else:
+        # 1. User Message
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-            # B. Processing Logic
-            engine = RAGEngine() # Initialize the engine created in src/rag_engine.py
-            
-            with st.spinner("La IA está pensando..."):
-                # Check for "Summary" intent or standard question
-                if "resumen" in prompt.lower() or "summar" in prompt.lower():
-                    # Specialized prompt for summarization
-                    answer, sources = engine.answer_question("Haz un resumen conciso de los puntos clave", input_url)
-                else:
-                    # Standard RAG Retrieval
-                    answer, sources = engine.answer_question(prompt, input_url)
+        # 2. Assistant Response
+        engine = RAGEngine()
+        with st.chat_message("assistant"):
+            with st.spinner("Pensando..."):
+                answer, sources = engine.answer_question(prompt, input_url)
+                st.markdown(answer)
                 
-                # C. Append Assistant Message to History
-                st.session_state.messages.append({"role": "assistant", "content": answer})
-                
-                # D. Update Sources for Buttons (Persistence)
-                st.session_state.current_sources = sources
-                
-                # E. Force Rerun to render the new message and update buttons immediately
-                st.rerun()
+                # Render buttons immediately for the new response
+                if sources:
+                    st.caption("📍 Momentos clave:")
+                    cols = st.columns(4)
+                    for j, seg in enumerate(sources):
+                        time_label = format_time(seg['start'])
+                        if cols[j % 4].button(f"▶ {time_label}", key=f"new_{j}"):
+                            seek_video(seg['start'])
+
+        # 3. Save to History (Including Sources!)
+        st.session_state.messages.append({
+            "role": "assistant", 
+            "content": answer,
+            "sources": sources # Persist sources for future re-renders
+        })
+        
+        # No st.rerun() needed here usually, but if buttons don't work on first click, ill  add it.
+        # st.rerun()

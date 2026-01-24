@@ -14,7 +14,7 @@ class VideoTranscriber:
 
     def __init__(self):
         # Load configuration from .env
-        self.model_size = os.getenv("WHISPER_MODEL_SIZE", "base")
+        self.model_size = os.getenv("WHISPER_MODEL_SIZE", "tiny")
         self.device = os.getenv("WHISPER_DEVICE", "cpu")
         self.compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
         
@@ -30,16 +30,10 @@ class VideoTranscriber:
     def download_audio(self, youtube_url: str, output_path: str = "data/tmp") -> tuple[str, str]:
         """
         Downloads the best available audio from a YouTube URL.
-        
-        Args:
-            youtube_url (str): The valid YouTube URL.
-            output_path (str): Directory to save the temporary audio file.
-            
-        Returns:
-            tuple: (file_path, video_title)
         """
         os.makedirs(output_path, exist_ok=True)
         
+        # ENGINEERING FIX: Simplified options to reduce fingerprinting
         ydl_opts = {
             'format': 'bestaudio/best',
             'postprocessors': [{
@@ -47,21 +41,26 @@ class VideoTranscriber:
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
-            # Output template: data/tmp/VIDEO_ID.mp3
             'outtmpl': f'{output_path}/%(id)s.%(ext)s',
             'quiet': True,
             'no_warnings': True,
-            # Youtube blocked the acces (403) so we need to add this options
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'referer': 'https://www.google.com/',
-            'nocheckcertificate': True
+            'nocheckcertificate': True,
+            # CRITICAL FIX for 403: Force IPv4. 
+            # IPv6 addresses from Docker/Cloud are often flagged by YouTube instantly.
+            'source_address': '0.0.0.0', 
         }
 
         print(f"📥 Downloading audio from: {youtube_url}")
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(youtube_url, download=True)
-            filename = f"{output_path}/{info['id']}.mp3"
-            return filename, info.get('title', 'Unknown Title')
+        
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(youtube_url, download=True)
+                filename = f"{output_path}/{info['id']}.mp3"
+                return filename, info.get('title', 'Unknown Title')
+        except Exception as e:
+            # Capturamos el error para que la UI no explote con un traceback feo
+            print(f"❌ YouTube Download Error: {e}")
+            raise e
 
     def transcribe(self, audio_path: str) -> list[dict]:
         """

@@ -23,51 +23,44 @@ class RAGEngine:
         Main logic: Retrieve chunks, build context, and generate a cited answer.
         """
         # 1. RETRIEVAL: Find top matches in Qdrant
-        # We fetch 5 candidates to allow for filtering duplicates later
-        raw_context_segments = self.db.search(question, limit=5)
+        # TUNING: Increased limit from 5 to 10 to handle multi-part questions better.
+        # This ensures we get context for "Question A" AND "Question B" if they are far apart.
+        raw_context_segments = self.db.search(question, limit=10)
         
         if not raw_context_segments:
-            return "No relevant information found in the video.", []
+            return "No encontré información relevante en el vídeo.", []
 
         # 1.1 FILTERING LOGIC (The Button Fix)
-        # We process 'raw_context_segments' into 'context_segments' to remove redundancy
         context_segments = []
         seen_time_windows = set()
         
         for seg in raw_context_segments:
-            # We group timestamps by 30-second windows to avoid buttons like 4:05 and 4:08
             time_window = int(seg['start'] // 30)
-            
             if time_window not in seen_time_windows:
                 context_segments.append(seg)
                 seen_time_windows.add(time_window)
             
-            # Limit to 3 distinct buttons for a clean UI
-            if len(context_segments) >= 3:
+            # Increased visual button limit to 4 to accommodate more info
+            if len(context_segments) >= 4:
                 break
         
-        # Sort chronologically so the buttons appear in order (e.g., 0:30, then 4:15)
         context_segments.sort(key=lambda x: x['start'])
 
-        # 2. CONTEXT PREPARATION: Build a string with timestamps for the LLM
-        # This follows the 'Structured Aggregation' logic to maintain accuracy
+        # 2. CONTEXT PREPARATION
         context_text = ""
         for i, seg in enumerate(context_segments):
-            # UX FIX: Convert seconds to MM:SS directly in the Context
-            # This forces the LLM to see and use human-readable timestamps
             start_m, start_s = divmod(int(seg['start']), 60)
             end_m, end_s = divmod(int(seg['end']), 60)
-            
             time_str = f"{start_m:02d}:{start_s:02d} - {end_m:02d}:{end_s:02d}"
-            
-            # The context now looks like: [Source 1] (04:15 - 04:30): ...
             context_text += f"\n[Source {i+1}] ({time_str}): {seg['text']}\n"
 
-        # 3. PROMPT ENGINEERING: Setting the rules for the AI
+        # 3. PROMPT ENGINEERING (Refined for multi-questions)
         system_prompt = (
             "You are a professional assistant. Answer questions based on the provided video segments. "
-            "You MUST cite the specific timestamp (e.g., 04:15) for every claim you make. "
-            "If the answer is not in the context, say you don't know. Be concise."
+            "INSTRUCTIONS:\n"
+            "1. You MUST cite the specific timestamp (e.g., 04:15) for every claim.\n"
+            "2. If the user asks multiple questions, make sure to answer ALL of them.\n"
+            "3. If the answer is not in the context, say you don't know."
         )
         
         user_prompt = f"User Question: {question}\n\nVideo Content:\n{context_text}"
