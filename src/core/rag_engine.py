@@ -25,7 +25,10 @@ class RAGEngine:
         # 1. RETRIEVAL: Find top matches in Qdrant
         # TUNING: Increased limit from 5 to 10 to handle multi-part questions better.
         # This ensures we get context for "Question A" AND "Question B" if they are far apart.
-        raw_context_segments = self.db.search(question, limit=10)
+        raw_context_segments = self.db.search(question, limit=15)
+        print(f"🔎 Raw segments found: {len(raw_context_segments)}")
+        for idx, seg in enumerate(raw_context_segments):
+             print(f"  [{idx}] {seg['start']}s: {seg['text'][:50]}...")
         
         if not raw_context_segments:
             return "No encontré información relevante en el vídeo.", []
@@ -35,13 +38,14 @@ class RAGEngine:
         seen_time_windows = set()
         
         for seg in raw_context_segments:
-            time_window = int(seg['start'] // 30)
+            # Relaxed window to 10s to allow more granular buttons
+            time_window = int(seg['start'] // 10)
             if time_window not in seen_time_windows:
                 context_segments.append(seg)
                 seen_time_windows.add(time_window)
             
-            # Increased visual button limit to 4 to accommodate more info
-            if len(context_segments) >= 4:
+            # Increased visual button limit
+            if len(context_segments) >= 5:
                 break
         
         context_segments.sort(key=lambda x: x['start'])
