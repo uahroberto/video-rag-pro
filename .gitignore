@@ -5,9 +5,11 @@ __pycache__/
 
 # Sensitive data such as the api key
 .env
+.env.local
 
 # Local Database & Large Files
 qdrant_local_data/
+qdrant_storage/
 data/
 *.mp3
 *.mp4
@@ -15,3 +17,6 @@ data/
 # Model caches (HuggingFace)
 models/
 qdrant_storage/
+
+.DS_Store
+sudo
