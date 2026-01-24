@@ -23,6 +23,8 @@ def format_time(seconds: float) -> str:
 # --- SESSION STATE ---
 if 'video_start_time' not in st.session_state:
     st.session_state.video_start_time = 0
+if 'should_autoplay' not in st.session_state:
+    st.session_state.should_autoplay = False
 if 'video_key' not in st.session_state:
     st.session_state.video_key = str(uuid.uuid4())
 
@@ -37,10 +39,12 @@ if 'full_transcript' not in st.session_state:
 
 def seek_video(seconds):
     """Updates the video pointer and forces a widget refresh."""
-    st.session_state.video_start_time = seconds
+    st.session_state.video_start_time = int(seconds)
     st.session_state.video_key = str(uuid.uuid4())
     # Crucial: We don't want to lose the chat history on rerun
     # (Streamlit handles session_state persistence automatically)
+    st.session_state.should_autoplay = True
+    st.rerun()
 
 # --- MAIN LAYOUT ---
 
@@ -82,8 +86,15 @@ with st.sidebar:
         st.subheader("Reproductor")
         with st.container(key=st.session_state.video_key):
             # autoplay=True lets the video start playing as soon as the timestamp button is clicked
-            st.video(input_url, start_time=st.session_state.video_start_time, autoplay = True)
-    
+            st.video(
+                input_url, 
+                start_time=st.session_state.video_start_time, 
+                autoplay=st.session_state.should_autoplay
+            )
+
+            # If autoplay is enabled, disable it and rerun to prevent constant autoplay
+            if st.session_state.should_autoplay:
+                st.session_state.should_autoplay = False
     # TRANSCRIPT FEATURE (Better UI)
     if st.session_state.full_transcript:
         with st.expander("📄 Ver Transcripción"):

@@ -33,7 +33,8 @@ class VideoTranscriber:
         """
         os.makedirs(output_path, exist_ok=True)
         
-        # ENGINEERING FIX: Simplified options to reduce fingerprinting
+        # ENGINEERING FIX V2: Client Masquerading
+        # We mimic an Android client to bypass strict web-based bot detection.
         ydl_opts = {
             'format': 'bestaudio/best',
             'postprocessors': [{
@@ -45,9 +46,18 @@ class VideoTranscriber:
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
-            # CRITICAL FIX for 403: Force IPv4. 
-            # IPv6 addresses from Docker/Cloud are often flagged by YouTube instantly.
-            'source_address': '0.0.0.0', 
+            'source_address': '0.0.0.0', # Keep IPv4 force
+            
+            # --- NEW ANTI-BOT STRATEGY ---
+            # 1. Impersonate Android (less strict checks)
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                    'player_skip': ['webpage', 'configs', 'js'], 
+                }
+            },
+            # 2. Add random sleep to look human (optional but recommended)
+            'sleep_interval_requests': 1,
         }
 
         print(f"📥 Downloading audio from: {youtube_url}")
