@@ -18,6 +18,7 @@ class VideoTranscriber:
         self.model_size = os.getenv("WHISPER_MODEL_SIZE", "tiny")
         self.device = os.getenv("WHISPER_DEVICE", "cpu")
         self.compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+        self.beam_size = int(os.getenv("WHISPER_BEAM_SIZE", "1"))
 
         print(
             f"🚀 Loading Whisper model '{self.model_size}' on {self.device} with precision {self.compute_type}..."
@@ -92,9 +93,10 @@ class VideoTranscriber:
         # We force 'es' (Spanish) for testing, but can be set to None for auto-detection
         segments, _ = self.model.transcribe(
             audio_path,
-            beam_size=5,
+            beam_size=self.beam_size,
             language="es",
             vad_filter=True,  # Filters out silence to speed up processing
+            vad_parameters=dict(min_silence_duration_ms=500),
         )
 
         results = []
