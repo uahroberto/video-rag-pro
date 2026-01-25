@@ -37,7 +37,7 @@ graph LR
     H <--> F
     H --> I[LLM Synthesis]
     I --> J[Answer + Time Buttons]
-
+```
 
 ---
 
