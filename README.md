@@ -111,6 +111,6 @@ We enforce code quality gates to prevent technical debt:
 
 ## 🔮 Roadmap
 
-* [ ] **Hybrid Search:** Implement BM25 + Dense Vector fusion for better keyword retrieval.
+* [x] **Hybrid Search:** Implement BM25 + Dense Vector fusion for better keyword retrieval.
 * [ ] **Visual RAG:** Integrate VLM (Vision Language Models) to index slides and visual code snippets.
 * [ ] **RAGAS Evaluation:** Automated pipeline to measure Faithfulness and Answer Relevancy.
