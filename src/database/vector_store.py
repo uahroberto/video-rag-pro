@@ -1,8 +1,9 @@
 import os
 import uuid
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from typing import List, Dict, Any
+from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
+from fastembed import SparseTextEmbedding
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,86 +11,124 @@ load_dotenv()
 
 class VectorDatabase:
     """
-    Handles local/remote vector storage and semantic search.
-    Uses a local embedding model to keep costs at zero.
+    Manages Hybrid Search (Dense + Sparse) interaction with Qdrant.
+
+    Architecture:
+    - Dense Vector: 'all-MiniLM-L6-v2' (Semantic understanding)
+    - Sparse Vector: 'Qdrant/bm25' (Keyword matching)
     """
 
-    def __init__(self, collection_name: str = "video_knowledge"):
+    def __init__(self, collection_name: str = "video_knowledge_hybrid"):
         self.collection_name = collection_name
 
-        # Internal log in English for professional server monitoring
-        print("🤖 Loading local embedding model (all-MiniLM-L6-v2)...")
-        self.encoder = SentenceTransformer("all-MiniLM-L6-v2")
+        # 1. Load Dense Model (Semantic)
+        print("🤖 Loading Dense model (all-MiniLM-L6-v2)...")
+        self.dense_model = SentenceTransformer("all-MiniLM-L6-v2")
 
-        # Logic: Docker uses QDRANT_HOST, local dev uses QDRANT_PATH
+        # 2. Load Sparse Model (Keywords/BM25)
+        print("🤖 Loading Sparse model (Qdrant/bm25)...")
+        self.sparse_model = SparseTextEmbedding(model_name="Qdrant/bm25")
+
         qdrant_host = os.getenv("QDRANT_HOST", "localhost")
         qdrant_port = int(os.getenv("QDRANT_PORT", 6333))
-        # I commented this line out  to remove the dependency on QDRANT_PATH
-        # qdrant_path = os.getenv("QDRANT_PATH")
 
-        # Previous logic was for local dev, now we only use Docker
         print(f"🌐 Database Mode: Client-Server ({qdrant_host}:{qdrant_port})")
-
-        try:
-            self.client = QdrantClient(host=qdrant_host, port=qdrant_port)
-            self.client.get_collections()  # Test connection
-        except Exception as e:
-            print(f"Error al conectar con Qdrant: {e}")
-            raise
+        self.client = QdrantClient(host=qdrant_host, port=qdrant_port)
 
         self._ensure_collection()
 
     def _ensure_collection(self):
         """
-        Checks for collection existence atomically to avoid 409 Conflicts.
-        This ensures idempotency during Streamlit reruns.
+        Ensures the collection exists with Hybrid Schema (Dense + Sparse configuration).
         """
-        # Use the native method to check existence and prevent race conditions
         if not self.client.collection_exists(self.collection_name):
-            # Frontend-facing or log messages in Spanish
-            print(f"🛠️ Creando colección: {self.collection_name}")
+            print(f"🛠️ Creating Hybrid Collection: {self.collection_name}")
 
             self.client.create_collection(
                 collection_name=self.collection_name,
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+                vectors_config={
+                    "text-dense": models.VectorParams(
+                        size=384, distance=models.Distance.COSINE
+                    )
+                },
+                sparse_vectors_config={
+                    "text-sparse": models.SparseVectorParams(
+                        index=models.SparseIndexParams(
+                            on_disk=False,
+                        )
+                    )
+                },
             )
         else:
-            # Success message for the user/operator
-            print(
-                f"✅ La colección '{self.collection_name}' ya está lista para su uso."
-            )
+            print(f"✅ Collection '{self.collection_name}' ready.")
 
-    def upsert_chunks(self, chunks: list[dict], video_id: str):
-        """Converts chunks to vectors and stores them with temporal metadata."""
-        print(f"🧠 Vectorizing {len(chunks)} chunks for video {video_id}...")
+    def upsert_chunks(self, chunks: List[Dict[str, Any]], video_id: str):
+        """
+        Generates both Dense and Sparse vectors and uploads them in batch.
+        """
+        texts = [chunk["text"] for chunk in chunks]
+        print(f"🧠 Vectorizing {len(chunks)} chunks (Hybrid Mode)...")
+
+        # 1. Generate Dense Embeddings
+        dense_embeddings = self.dense_model.encode(texts)
+
+        # 2. Generate Sparse Embeddings
+        sparse_embeddings = list(self.sparse_model.embed(texts))
 
         points = []
-        for chunk in chunks:
-            vector = self.encoder.encode(chunk["text"]).tolist()
-
+        for i, text in enumerate(texts):
             points.append(
-                PointStruct(
+                models.PointStruct(
                     id=str(uuid.uuid4()),
-                    vector=vector,
                     payload={
                         "video_id": video_id,
-                        "text": chunk["text"],
-                        "start": chunk["start"],
-                        "end": chunk["end"],
+                        "text": text,
+                        "start": chunks[i]["start"],
+                        "end": chunks[i]["end"],
+                    },
+                    vector={
+                        "text-dense": dense_embeddings[i].tolist(),
+                        "text-sparse": models.SparseVector(
+                            indices=sparse_embeddings[i].indices.tolist(),
+                            values=sparse_embeddings[i].values.tolist(),
+                        ),
                     },
                 )
             )
 
         self.client.upsert(collection_name=self.collection_name, points=points)
-        print("✅ Vectors successfully stored in Qdrant.")
+        print(f"✅ Indexed {len(points)} hybrid vectors for video {video_id}.")
 
-    def search(self, query: str, limit: int = 3):
-        """Finds relevant segments using the modern query_points API."""
-        query_vector = self.encoder.encode(query).tolist()
+    def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Performs Hybrid Search using Reciprocal Rank Fusion (RRF).
+        """
+        # 1. Vectorize Query
+        query_dense = self.dense_model.encode(query).tolist()
+        query_sparse = list(self.sparse_model.embed([query]))[0]
 
-        # Using modern unified API for high performance
-        response = self.client.query_points(
-            collection_name=self.collection_name, query=query_vector, limit=limit
+        # 2. Hybrid Query (PREFETCH + FUSION)
+        # Here was the error: We used FusionQuery instead of NamedVector
+        search_result = self.client.query_points(
+            collection_name=self.collection_name,
+            prefetch=[
+                models.Prefetch(
+                    query=query_dense,
+                    using="text-dense",
+                    limit=limit * 2,  # Traemos más candidatos para fusionar mejor
+                ),
+                models.Prefetch(
+                    query=models.SparseVector(
+                        indices=query_sparse.indices.tolist(),
+                        values=query_sparse.values.tolist(),
+                    ),
+                    using="text-sparse",
+                    limit=limit * 2,
+                ),
+            ],
+            # THE KEY CHANGE: We used FusionQuery instead of NamedVector
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
+            limit=limit,
         )
 
-        return [hit.payload for hit in response.points]
+        return [hit.payload for hit in search_result.points]
