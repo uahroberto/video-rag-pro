@@ -1,6 +1,7 @@
 altair==6.0.0
 annotated-doc==0.0.4
 annotated-types==0.7.0
+antlr4-python3-runtime==4.9.3
 anyio==4.12.1
 attrs==25.4.0
 av==16.1.0
@@ -11,6 +12,7 @@ cfgv==3.5.0
 charset-normalizer==3.4.4
 click==8.3.1
 coloredlogs==15.0.1
+colorlog==6.10.1
 ctranslate2==4.6.3
 distlib==0.4.0
 distro==1.9.0
@@ -71,8 +73,10 @@ nvidia-nccl-cu12==2.27.5
 nvidia-nvjitlink-cu12==12.8.93
 nvidia-nvshmem-cu12==3.3.20
 nvidia-nvtx-cu12==12.8.90
+omegaconf==2.3.0
 onnxruntime==1.23.2
 openai==2.15.0
+opencv-python==4.13.0.90
 orjson==3.11.5
 ormsgpack==1.12.2
 packaging==25.0
@@ -84,6 +88,7 @@ pre_commit==4.5.1
 protobuf==6.33.4
 py_rust_stemmers==0.1.5
 pyarrow==23.0.0
+pyclipper==1.4.0
 pydantic==2.12.5
 pydantic_core==2.41.5
 pydeck==0.9.1
@@ -92,6 +97,7 @@ python-dotenv==1.2.1
 pytz==2025.2
 PyYAML==6.0.3
 qdrant-client==1.16.2
+rapidocr==3.6.0
 referencing==0.37.0
 regex==2026.1.15
 requests==2.32.5
@@ -101,6 +107,7 @@ safetensors==0.7.0
 scikit-learn==1.8.0
 scipy==1.17.0
 sentence-transformers==5.2.1
+shapely==2.1.2
 shellingham==1.5.4
 six==1.17.0
 smmap==5.0.2
