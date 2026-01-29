@@ -73,6 +73,7 @@ nvidia-nvshmem-cu12==3.3.20
 nvidia-nvtx-cu12==12.8.90
 onnxruntime==1.23.2
 openai==2.15.0
+opencv-python==4.13.0.90
 orjson==3.11.5
 ormsgpack==1.12.2
 packaging==25.0
