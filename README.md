@@ -1,74 +1,52 @@
 # 📹 Video RAG Pro
 
-![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)
-![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?style=for-the-badge&logo=docker)
-![Qdrant](https://img.shields.io/badge/Vector_DB-Qdrant-red?style=for-the-badge)
-![Code Style](https://img.shields.io/badge/Code%20Style-Ruff-black?style=for-the-badge)
-![Type Checked](https://img.shields.io/badge/Type%20Checked-Mypy-blueviolet?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.12-blue) ![AI](https://img.shields.io/badge/Multimodal-Audio%20%2B%20Visual-purple) ![Qdrant](https://img.shields.io/badge/Vector%20DB-Qdrant-red) ![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-orange)
 
-**Video RAG Pro** is an AI-powered engine that transforms passive video consumption into an interactive knowledge retrieval experience. It allows users to "chat" with video content, retrieving precise temporal citations from hours of footage in seconds.
+**Video RAG Pro** is a **Multimodal AI engine** that transforms passive video consumption into an interactive knowledge retrieval experience. Unlike standard tools that only "listen" to audio, Video RAG Pro **"watches" the video too**, reading code snippets, slides, and diagrams on screen.
 
-Unlike standard summarizers, this system uses **Retrieval-Augmented Generation (RAG)** to ground answers in specific video timestamps, enabling non-linear consumption of technical lectures and conferences.
-
----
+It allows users to "chat" with video content, retrieving precise **Audio & Visual citations** in seconds using a Hybrid Search architecture.
 
 ## 🚀 Key Features
 
-* **⚡ High-Performance Ingestion:** Optimized local transcription pipeline using `faster-whisper` with custom quantization parameters, achieving a **0.14 Real-Time Factor (RTF)** on CPU.
-* **🧠 Semantic Search:** Powered by **Qdrant** vector database to retrieve context based on meaning, not just keyword matching.
+* **👁️ Visual RAG (OCR):** Automatically extracts and indexes text from video frames (code, slides, diagrams) using **RapidOCR**. Captures information that is *shown* but not *spoken* (e.g., specific variable names or config values).
+* **🔍 Hybrid Search:** Powered by **Qdrant**, combining **Dense Vectors** (Semantic Search) with **Sparse Vectors (BM25)** (Keyword Search). This ensures you find concepts by meaning ("how to loop") AND by exact syntax (`for i in range`).
+* **⚡ High-Performance Ingestion:** Optimized pipeline using `faster-whisper` (Int8 quantization) for audio and intelligent frame sampling (5s interval) for video, achieving high accuracy with low latency.
 * **🛡️ Reliability Layer:** CI/CD integration with `pre-commit` hooks enforcing strict typing (`mypy`) and linting (`ruff`) standards.
 * **🐳 Containerized Architecture:** Fully dockerized environment ensuring reproducibility across development and production.
-* **🔒 Privacy First:** Local embeddings and transcription; video data never leaves the infrastructure during processing.
-
----
+* **🔒 Privacy First:** Local embeddings, OCR, and transcription; video data never leaves your infrastructure during processing (except for the final LLM reasoning step).
 
 ## 🛠️ Architecture
 
-The system follows a modular ETL (Extract, Transform, Load) pipeline pattern:
+The system follows a modular **Multimodal ETL** pipeline:
 
-```mermaid
-graph LR
-    A[Video Input] --> B(Audio Extraction via yt-dlp)
-    B --> C{Transcriber Engine}
-    C -->|Output: Text + Timestamps| D[Chunking Strategy]
-    D --> E[Vector Embedding]
-    E --> F[(Qdrant Vector DB)]
-    G[User Query] --> H[Semantic Search]
-    H <--> F
-    H --> I[LLM Synthesis]
-    I --> J[Answer + Time Buttons]
-```
-
----
+1.  **Extract:** Downloads Video (MP4) and Audio (MP3) using a robust anti-bot `yt-dlp` wrapper.
+2.  **Transform (Audio):** Transcribes speech to text using `faster-whisper`.
+3.  **Transform (Visual):** Scans video frames every 5 seconds, detecting text/code via `RapidOCR`.
+4.  **Load:** Vectorizes both streams (Audio & Visual) using **Hybrid Embeddings** (Dense + Sparse) and stores them in **Qdrant** with metadata pointing to the exact source type and timestamp.
 
 ## 📊 Performance Benchmarks
 
-Engineering decisions are data-driven. We optimized the inference pipeline to balance latency and accuracy.
+Engineering decisions are data-driven to balance latency and accuracy.
 
-**Test Environment:** Fedora Linux, CPU Inference, 1m45s Technical Sample.
-
-| Configuration | Latency | Real-Time Factor (RTF) | Outcome |
+| Configuration | Latency | RTF | Outcome |
 | :--- | :--- | :--- | :--- |
-| **Baseline** (Beam Size 5) | 26.0s | ~0.25 | High precision, slow UX. |
-| **Optimized** (Beam Size 1) | **14.5s** | **~0.14** | **44% Latency Reduction** with maintained semantic integrity. |
-
-> *Optimization Details:* By switching to Greedy Search (`beam_size=1`) and `int8` quantization, we achieved a sub-second response feel for end-users while maintaining entity recognition accuracy for RAG tasks.
-
----
+| **Audio Baseline** | 26.0s | ~0.25 | High precision, slow UX. |
+| **Audio Optimized** | 14.5s | ~0.14 | **44% Latency Reduction** with `int8` quantization. |
+| **Visual OCR** | ~0.8s/frame | N/A | Real-time capable extraction on CPU (ONNX Runtime). |
 
 ## 💻 Tech Stack
 
 * **Core:** Python 3.12
-* **AI & NLP:** `faster-whisper`, `sentence-transformers`, OpenAI GPT-4o-mini
-* **Database:** Qdrant (Vector Store)
-* **Frontend:** Streamlit
-* **DevOps:** Docker, Docker Compose, Pre-commit
+* **AI & NLP:** `faster-whisper`, `sentence-transformers`, `fastembed` (Sparse Vectors), OpenAI GPT-4o-mini.
+* **Computer Vision:** `RapidOCR`, `opencv-python-headless`.
+* **Database:** Qdrant (Hybrid Vector Store).
+* **Frontend:** Streamlit (with Custom Media Cards).
+* **DevOps:** Docker, Docker Compose, Pre-commit, Ruff, Mypy.
 
----
-
-## 🏃‍♂️ Quick Start
+## runner️ Quick Start
 
 ### Prerequisites
+
 * Docker & Docker Compose
 * OpenAI API Key
 
@@ -83,7 +61,7 @@ Engineering decisions are data-driven. We optimized the inference pipeline to ba
 2.  **Configure Environment:**
     ```bash
     cp .env.example .env
-    # Edit .env with your OpenAI API Key and settings
+    # Edit .env with your OpenAI API Key and Qdrant settings
     ```
 
 3.  **Launch with Docker:**
@@ -91,26 +69,23 @@ Engineering decisions are data-driven. We optimized the inference pipeline to ba
     docker-compose up --build
     ```
 
-4.  **Access the App:**
-    Navigate to `http://localhost:8501`
+4.  **Access the App:** Navigate to `http://localhost:8501`.
 
----
+5.  **Usage:**
+    * Paste a YouTube URL (e.g., a coding tutorial).
+    * Click **"🚀 Procesar Vídeo Completo"**.
+    * Ask questions like *"What variable name is used in the code?"* or *"What does the slide say about architecture?"*.
 
 ## 🧪 Quality Assurance
 
 We enforce code quality gates to prevent technical debt:
-
 * **Type Safety:** 100% type coverage required via `mypy`.
 * **Linting:** PEP 8 compliance enforced by `ruff`.
-* **Testing:** Run local checks with:
-    ```bash
-    pre-commit run --all-files
-    ```
-
----
+* **Testing:** Run local checks with: `pre-commit run --all-files`
 
 ## 🔮 Roadmap
 
-* [x] **Hybrid Search:** Implement BM25 + Dense Vector fusion for better keyword retrieval.
-* [ ] **Visual RAG:** Integrate VLM (Vision Language Models) to index slides and visual code snippets.
+* [x] **Hybrid Search:** Implement BM25 + Dense Vector fusion.
+* [x] **Visual RAG:** Index slides and visual code snippets via OCR.
+* [ ] **VLM Integration:** Upgrade from OCR to Vision Language Models (e.g., LLaVA) to "describe" images, not just read text.
 * [ ] **RAGAS Evaluation:** Automated pipeline to measure Faithfulness and Answer Relevancy.
