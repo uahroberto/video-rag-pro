@@ -12,6 +12,7 @@ load_dotenv()
 class VectorDatabase:
     """
     Manages Hybrid Search (Dense + Sparse) interaction with Qdrant.
+    Updated to support Multimodal ingestion (Audio + Visual payloads).
 
     Architecture:
     - Dense Vector: 'all-MiniLM-L6-v2' (Semantic understanding)
@@ -19,13 +20,18 @@ class VectorDatabase:
     """
 
     def __init__(self, collection_name: str = "video_knowledge_hybrid"):
+        """
+        Initializes the database connection and loads embedding models.
+        """
         self.collection_name = collection_name
 
         # 1. Load Dense Model (Semantic)
+        # Why? Allows searching by meaning ("how to loop" finds "while True")
         print("🤖 Loading Dense model (all-MiniLM-L6-v2)...")
         self.dense_model = SentenceTransformer("all-MiniLM-L6-v2")
 
         # 2. Load Sparse Model (Keywords/BM25)
+        # Why? Allows searching by exact terms ("error 404", variable names)
         print("🤖 Loading Sparse model (Qdrant/bm25)...")
         self.sparse_model = SparseTextEmbedding(model_name="Qdrant/bm25")
 
@@ -64,28 +70,80 @@ class VectorDatabase:
 
     def upsert_chunks(self, chunks: List[Dict[str, Any]], video_id: str):
         """
-        Generates both Dense and Sparse vectors and uploads them in batch.
+        Generates vectors and uploads them in batch.
+
+        POLYMORPHISM EXPLAINED:
+        This method acts as an Adapter. It accepts data in two shapes:
+        1. Audio Chunks (Flat dict): {'text': '...', 'start': 0.0}
+        2. Visual Chunks (Nested dict): {'page_content': '...', 'metadata': {...}}
+
+        It normalizes both into a standard Qdrant Payload.
         """
-        texts = [chunk["text"] for chunk in chunks]
-        print(f"🧠 Vectorizing {len(chunks)} chunks (Hybrid Mode)...")
+        if not chunks:
+            print("⚠️ No chunks to upsert.")
+            return
 
-        # 1. Generate Dense Embeddings
-        dense_embeddings = self.dense_model.encode(texts)
+        # --- 1. DATA NORMALIZATION STRATEGY ---
+        # We extract the raw text for embedding, regardless of the source format.
+        texts_to_vectorize = []
 
-        # 2. Generate Sparse Embeddings
-        sparse_embeddings = list(self.sparse_model.embed(texts))
+        for chunk in chunks:
+            # Case A: Visual Chunk (from VisualIngestionService)
+            if "page_content" in chunk:
+                texts_to_vectorize.append(chunk["page_content"])
+
+            # Case B: Audio Chunk (from Transcriber)
+            elif "text" in chunk:
+                texts_to_vectorize.append(chunk["text"])
+
+            else:
+                print(f"⚠️ Skipping malformed chunk keys: {chunk.keys()}")
+                texts_to_vectorize.append(
+                    ""
+                )  # Maintain index alignment with empty string
+
+        print(f"🧠 Vectorizing {len(texts_to_vectorize)} chunks (Hybrid Mode)...")
+
+        # --- 2. EMBEDDING GENERATION ---
+        # Dense: Creates a 384-dimensional vector capturing "meaning"
+        dense_embeddings = self.dense_model.encode(texts_to_vectorize)
+        # Sparse: Creates a vector capturing "specific keywords"
+        sparse_embeddings = list(self.sparse_model.embed(texts_to_vectorize))
 
         points = []
-        for i, text in enumerate(texts):
+
+        # --- 3. PAYLOAD CONSTRUCTION ---
+        for i, chunk in enumerate(chunks):
+            text_content = texts_to_vectorize[i]
+
+            # Optimization: Skip empty content to keep index clean
+            if not text_content.strip():
+                continue
+
+            # Base Payload (Common fields)
+            payload = {"video_id": video_id, "text": text_content, "type": "unknown"}
+
+            # Map specific fields based on source type (The Adapter Logic)
+            if "page_content" in chunk:
+                # IS VISUAL DATA
+                meta = chunk["metadata"]
+                payload["type"] = "visual"
+                # Visual events are instantaneous, so start == end
+                payload["start"] = meta.get("timestamp", 0.0)
+                payload["end"] = meta.get("timestamp", 0.0)
+                payload["frame_path"] = meta.get("frame_path", "")
+
+            elif "text" in chunk:
+                # IS AUDIO DATA
+                payload["type"] = "audio"
+                payload["start"] = chunk.get("start", 0.0)
+                payload["end"] = chunk.get("end", 0.0)
+
+            # Create the PointStruct required by Qdrant
             points.append(
                 models.PointStruct(
-                    id=str(uuid.uuid4()),
-                    payload={
-                        "video_id": video_id,
-                        "text": text,
-                        "start": chunks[i]["start"],
-                        "end": chunks[i]["end"],
-                    },
+                    id=str(uuid.uuid4()),  # Generate unique ID for the vector
+                    payload=payload,
                     vector={
                         "text-dense": dense_embeddings[i].tolist(),
                         "text-sparse": models.SparseVector(
@@ -96,26 +154,30 @@ class VectorDatabase:
                 )
             )
 
-        self.client.upsert(collection_name=self.collection_name, points=points)
-        print(f"✅ Indexed {len(points)} hybrid vectors for video {video_id}.")
+        # Batch Upload
+        if points:
+            self.client.upsert(collection_name=self.collection_name, points=points)
+            print(f"✅ Indexed {len(points)} hybrid vectors for video {video_id}.")
+        else:
+            print("⚠️ No valid points created.")
 
     def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
         """
         Performs Hybrid Search using Reciprocal Rank Fusion (RRF).
+        combines semantic search results with keyword match results.
         """
-        # 1. Vectorize Query
+        # 1. Vectorize Query (Dense + Sparse)
         query_dense = self.dense_model.encode(query).tolist()
         query_sparse = list(self.sparse_model.embed([query]))[0]
 
-        # 2. Hybrid Query (PREFETCH + FUSION)
-        # Here was the error: We used FusionQuery instead of NamedVector
+        # 2. Hybrid Query Execution
         search_result = self.client.query_points(
             collection_name=self.collection_name,
             prefetch=[
                 models.Prefetch(
                     query=query_dense,
                     using="text-dense",
-                    limit=limit * 2,  # Traemos más candidatos para fusionar mejor
+                    limit=limit * 2,
                 ),
                 models.Prefetch(
                     query=models.SparseVector(
@@ -126,7 +188,6 @@ class VectorDatabase:
                     limit=limit * 2,
                 ),
             ],
-            # THE KEY CHANGE: We used FusionQuery instead of NamedVector
             query=models.FusionQuery(fusion=models.Fusion.RRF),
             limit=limit,
         )
