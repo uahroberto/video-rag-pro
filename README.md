@@ -43,7 +43,7 @@ Engineering decisions are data-driven to balance latency and accuracy.
 * **Frontend:** Streamlit (with Custom Media Cards).
 * **DevOps:** Docker, Docker Compose, Pre-commit, Ruff, Mypy.
 
-## runner️ Quick Start
+## Runner️ Quick Start
 
 ### Prerequisites
 
@@ -87,5 +87,5 @@ We enforce code quality gates to prevent technical debt:
 
 * [x] **Hybrid Search:** Implement BM25 + Dense Vector fusion.
 * [x] **Visual RAG:** Index slides and visual code snippets via OCR.
-* [ ] **VLM Integration:** Upgrade from OCR to Vision Language Models (e.g., LLaVA) to "describe" images, not just read text.
+* [x] **VLM Integration:** Upgrade from OCR to Vision Language Models (e.g., LLaVA) to "describe" images, not just read text.
 * [ ] **RAGAS Evaluation:** Automated pipeline to measure Faithfulness and Answer Relevancy.
