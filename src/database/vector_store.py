@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
 from fastembed import SparseTextEmbedding
@@ -32,7 +32,7 @@ class VectorDatabase:
 
         self._ensure_collection()
 
-    def _ensure_collection(self):
+    def _ensure_collection(self) -> None:
         if not self.client.collection_exists(self.collection_name):
             print(f"🛠️ Creating Hybrid Collection: {self.collection_name}")
             self.client.create_collection(
@@ -51,7 +51,7 @@ class VectorDatabase:
         else:
             print(f"✅ Collection '{self.collection_name}' ready.")
 
-    def upsert_chunks(self, chunks: List[Dict[str, Any]], video_id: str):
+    def upsert_chunks(self, chunks: List[Dict[str, Any]], video_id: str) -> None:
         """
         Generates vectors and uploads them in batch.
         Handles polymorphism:
@@ -130,14 +130,32 @@ class VectorDatabase:
             self.client.upsert(collection_name=self.collection_name, points=points)
             print(f"✅ Indexed {len(points)} hybrid vectors for video {video_id}.")
 
-    def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    def search(
+        self, query: str, limit: int = 5, video_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         query_dense = self.dense_model.encode(query).tolist()
         query_sparse = list(self.sparse_model.embed([query]))[0]
+
+        # Construct Filter if video_id provided
+        query_filter = None
+        if video_id:
+            query_filter = models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="video_id", match=models.MatchValue(value=video_id)
+                    )
+                ]
+            )
 
         search_result = self.client.query_points(
             collection_name=self.collection_name,
             prefetch=[
-                models.Prefetch(query=query_dense, using="text-dense", limit=limit * 2),
+                models.Prefetch(
+                    query=query_dense,
+                    using="text-dense",
+                    limit=limit * 2,
+                    filter=query_filter,
+                ),
                 models.Prefetch(
                     query=models.SparseVector(
                         indices=query_sparse.indices.tolist(),
@@ -145,6 +163,7 @@ class VectorDatabase:
                     ),
                     using="text-sparse",
                     limit=limit * 2,
+                    filter=query_filter,
                 ),
             ],
             query=models.FusionQuery(fusion=models.Fusion.RRF),
