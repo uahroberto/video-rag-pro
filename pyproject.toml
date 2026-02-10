@@ -1,3 +1,23 @@
+[tool.poetry]
+name = "video-rag-pro"
+version = "0.1.0"
+description = "Video RAG Professional Engine"
+authors = ["Roberto <tu_email@ejemplo.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "^1.12.0"
+python-dotenv = "^1.0.1"
+qdrant-client = "^1.7.3"
+sentence-transformers = "^2.3.1"
+fastembed = "^0.2.0"
+streamlit = "^1.31.1"
+yt-dlp = "^2023.11.16"
+faster-whisper = "^1.0.0"
+opencv-python = "^4.9.0.80"
+numpy = "^1.26.4"
+
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 select = ["E", "F"]
