@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 Handles the logical grouping of transcription segments into overlapping chunks.
 This preserves temporal metadata while ensuring semantic context for the RAG engine.
@@ -15,7 +17,7 @@ class ChunkingProcessor:
         self.min_chunk_size = min_chunk_size
         self.overlap_segments = overlap_segments
 
-    def create_chunks(self, segments: list[dict]) -> list[dict]:
+    def create_chunks(self, segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Groups atomic segments into larger chunks with precise start/end timestamps.
         Implements 'Structured Aggregation' as per architectural validation.
@@ -41,7 +43,7 @@ class ChunkingProcessor:
                 }
                 chunks.append(chunk_data)
 
-                # Reset for next chunk, but keep overlap for context preservation (essential for RAG)
+                # Reset for next chunk, but keep overlap for context preservation
                 if i < len(segments) - 1:
                     # Move back index to create overlap
                     i -= self.overlap_segments

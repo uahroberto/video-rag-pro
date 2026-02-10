@@ -2,6 +2,7 @@ import os
 from faster_whisper import WhisperModel
 import yt_dlp
 from dotenv import load_dotenv
+from typing import Any
 
 # Load environment variables
 load_dotenv()
@@ -9,11 +10,11 @@ load_dotenv()
 
 class VideoTranscriber:
     """
-    Handles downloading audio from YouTube and transcribing it using a local Whisper model.
+    Handles downloading audio from YouTube and transcribing it locally
     Optimized for CPU usage via CTranslate2 (faster-whisper).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Load configuration from .env
         self.model_size = os.getenv("WHISPER_MODEL_SIZE", "tiny")
         self.device = os.getenv("WHISPER_DEVICE", "cpu")
@@ -21,7 +22,8 @@ class VideoTranscriber:
         self.beam_size = int(os.getenv("WHISPER_BEAM_SIZE", "1"))
 
         print(
-            f"🚀 Loading Whisper model '{self.model_size}' on {self.device} with precision {self.compute_type}..."
+            f"🚀 Loading Whisper model '{self.model_size}' on {self.device} "
+            f"with precision {self.compute_type}..."
         )
 
         # Initialize the model once (Singleton pattern)
@@ -77,7 +79,7 @@ class VideoTranscriber:
             print(f"❌ YouTube Download Error: {e}")
             raise e
 
-    def transcribe(self, audio_path: str) -> list[dict]:
+    def transcribe(self, audio_path: str) -> list[dict[str, Any]]:
         """
         Transcribes an audio file and returns segments with precise timestamps.
 
@@ -85,7 +87,8 @@ class VideoTranscriber:
             audio_path (str): Path to the .mp3 file.
 
         Returns:
-            list[dict]: A list of segments like {'start': 0.0, 'end': 2.0, 'text': 'Hello'}
+            list[dict[str, Any]]: A list of segments containing keys like
+                'start', 'end', and 'text'.
         """
         print(f"🎙️ Transcribing {audio_path}... (Running locally on CPU)")
 
@@ -114,7 +117,7 @@ class VideoTranscriber:
 
     # Just to keep the server clean
     @staticmethod
-    def cleanup_temp_files(file_path: str):
+    def cleanup_temp_files(file_path: str) -> None:
         """Removes temporary audio files to save disk space."""
         try:
             if os.path.exists(file_path):
