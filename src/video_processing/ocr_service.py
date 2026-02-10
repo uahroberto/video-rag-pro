@@ -15,7 +15,7 @@ class OCRService:
     Optimized for CPU usage and technical text detection (code, slides).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initializes the OCR engine.
         We load the model once during instantiation to avoid overhead on every call.
@@ -30,13 +30,16 @@ class OCRService:
     def extract_text(self, image_path: str) -> str:
         """
         Extracts clean text from a given image path.
-        Handles the specific RapidOCROutput object structure (txts/scores attributes).
+
+        Handles the specific RapidOCROutput object structure (txts/scores
+        attributes).
 
         Args:
             image_path (str): Absolute or relative path to the .jpg file.
 
         Returns:
-            str: Combined text found in the image, joined by newlines. Returns empty string on failure.
+            str: Combined text found in the image, joined by newlines.
+                Returns empty string on failure.
         """
         # 1. Guard Clauses
         if not self.engine:
@@ -52,8 +55,8 @@ class OCRService:
             prediction = self.engine(image_path)
 
             # 3. Data Extraction (Adapter for RapidOCROutput object)
-            # The library returns an object with separate attributes for text and confidence scores.
-            # We use getattr to safely access them, defaulting to empty lists if missing.
+            # Returns an object with separate attributes for text and confidence scores.
+            # Use getattr to safely access them
             raw_texts = getattr(prediction, "txts", [])
             raw_scores = getattr(prediction, "scores", [])
 
@@ -75,7 +78,7 @@ class OCRService:
                 if confidence > 0.6 and len(str(text).strip()) > 1:
                     detected_texts.append(str(text))
 
-            # Join with newlines to preserve vertical structure (important for code snippets)
+            # Join with newlines to preserve vertical structure
             full_text = "\n".join(detected_texts)
             return full_text
 
