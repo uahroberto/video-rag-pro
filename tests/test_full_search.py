@@ -41,7 +41,7 @@ def main():
     results = db.search(query, limit=3)
 
     for i, res in enumerate(results):
-        print(f"\nResult {i+1} [Starts at {res['start']:.2f}s]:")
+        print(f"\nResult {i + 1} [Starts at {res['start']:.2f}s]:")
         print(f"Text: {res['text'][:150]}...")
 
 

@@ -54,3 +54,11 @@ warn_return_any = false # Relaxed
 warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
+
+# Execeptions for the tests
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+ignore_errors = true

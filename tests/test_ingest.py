@@ -29,7 +29,7 @@ def main():
     relevant_segments = db.search(query)
 
     for i, res in enumerate(relevant_segments):
-        print(f"\nResult {i+1} (Starts at {res['start']:.2f}s):")
+        print(f"\nResult {i + 1} (Starts at {res['start']:.2f}s):")
         print(f"Content: {res['text'][:150]}...")
 
 

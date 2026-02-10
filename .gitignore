@@ -20,3 +20,4 @@ qdrant_storage/
 
 .DS_Store
 sudo
+*.log
