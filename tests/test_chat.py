@@ -15,7 +15,7 @@ def main():
 
     print("\n📍 Fuentes para verificar:")
     for i, s in enumerate(sources):
-        print(f"[{i+1}] Segundo {s['start']:.2f}: {s['text'][:70]}...")
+        print(f"[{i + 1}] Segundo {s['start']:.2f}: {s['text'][:70]}...")
 
 
 if __name__ == "__main__":
