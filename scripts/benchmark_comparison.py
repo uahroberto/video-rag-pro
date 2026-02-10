@@ -11,7 +11,7 @@ DENSE_MODEL_ID = "all-MiniLM-L6-v2"
 SPARSE_MODEL_ID = "Qdrant/bm25"
 
 
-def main():
+def main() -> None:
     print("--- ⚖️ INICIANDO COMPARATIVA: DENSE VS HYBRID ---")
 
     # 1. Direct Connection (Bypass of your class to have total control)
@@ -48,9 +48,7 @@ def main():
 
         print("  🔴 [DENSE ONLY] Top 3:")
         for i, hit in enumerate(dense_results):
-            print(
-                f"     {i+1}. Score: {hit.score:.4f} | Texto: {hit.payload['text'][:60]}..."
-            )
+            print(f"     {i + 1}. Score: {hit.score:.4f} | Texto: {hit.payload['text'][:60]}...")
 
         # --- ROUND 2: HYBRID (What you have now) ---
         hybrid_results = client.query_points(
@@ -73,9 +71,7 @@ def main():
         print("  🟢 [HYBRID RRF] Top 3:")
         for i, hit in enumerate(hybrid_results):
             # Note: RRF does not give a similarity score 0-1, it gives a ranking score
-            print(
-                f"     {i+1}. Score: {hit.score:.4f} | Texto: {hit.payload['text'][:60]}..."
-            )
+            print(f"     {i + 1}. Score: {hit.score:.4f} | Texto: {hit.payload['text'][:60]}...")
 
 
 if __name__ == "__main__":

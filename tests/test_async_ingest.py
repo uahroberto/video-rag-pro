@@ -77,15 +77,10 @@ class TestAsyncIngest(unittest.TestCase):
         # or OCR fails/skips
         # We rely on 'test_video.mp4' actually having frames.
         # If OCR returns 'Slide Text Content' for at least one frame, we are good.
-        has_visual = any(
-            "Slide Text Content" in c.get("page_content", "") for c in chunks
-        )
+        has_visual = any("Slide Text Content" in c.get("page_content", "") for c in chunks)
 
         if not has_visual:
-            print(
-                "⚠️ Warning: No visual chunks found."
-                "Check loop logic or video content."
-            )
+            print("⚠️ Warning: No visual chunks found.Check loop logic or video content.")
 
         self.assertTrue(has_audio, "Should contain audio chunks")
 
@@ -117,9 +112,7 @@ class TestAsyncIngest(unittest.TestCase):
         self.rag.db.upsert_chunks = MagicMock()
 
         # 5. Run ingest with include_visuals=False
-        await self.rag.ingest_video(
-            "http://youtube.com/fake_audio", include_visuals=False
-        )
+        await self.rag.ingest_video("http://youtube.com/fake_audio", include_visuals=False)
 
         # 6. Assertions
         self.rag.transcriber.download_audio.assert_called_once()
@@ -131,8 +124,7 @@ class TestAsyncIngest(unittest.TestCase):
         chunks = call_args[0][0]
         has_audio = any("Hello Audio" in c.get("text", "") for c in chunks)
         has_visual = any(
-            "source" in c.get("metadata", {}) and c["metadata"]["source"] == "visual"
-            for c in chunks
+            "source" in c.get("metadata", {}) and c["metadata"]["source"] == "visual" for c in chunks
         )
 
         self.assertTrue(has_audio)

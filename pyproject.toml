@@ -72,3 +72,7 @@ warn_redundant_casts = true
 warn_return_any = false
 warn_unreachable = true
 warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true

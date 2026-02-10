@@ -112,7 +112,7 @@ if "full_transcript" not in st.session_state:
     st.session_state.full_transcript = ""
 
 
-def seek_video(seconds):
+def seek_video(seconds: float) -> None:
     st.session_state.video_start_time = int(seconds)
     st.session_state.video_key = str(uuid.uuid4())
     st.session_state.should_autoplay = True
@@ -132,13 +132,9 @@ with st.sidebar:
         help="Introduce una URL de YouTube o un ID corto.",
     )
 
-    if st.button(
-        "🚀 Procesar Vídeo Completo (Web)", type="primary", use_container_width=True
-    ):
+    if st.button("🚀 Procesar Vídeo Completo (Web)", type="primary", use_container_width=True):
         if input_id:
-            with st.status(
-                "🏗️ Iniciando Pipeline Multimodal...", expanded=True
-            ) as status:
+            with st.status("🏗️ Iniciando Pipeline Multimodal...", expanded=True) as status:
                 # A. SETUP
                 transcriber = VideoTranscriber()
                 visual_service = VisualIngestionService()
@@ -154,9 +150,7 @@ with st.sidebar:
                 # B. DOWNLOAD
                 status.write("📥 Descargando Archivos (Audio + Video)...")
                 if target_url:
-                    video_path, audio_path, title = download_video_files(
-                        target_url, process_id
-                    )
+                    video_path, audio_path, title = download_video_files(target_url, process_id)
                 else:
                     video_path = f"data/videos/{process_id}.mp4"
                     audio_path = f"data/tmp/{process_id}.mp3"
@@ -170,21 +164,15 @@ with st.sidebar:
                 # C. AUDIO PROCESSING
                 status.write("🎙️ Transcribiendo Audio (Whisper)...")
                 audio_chunks = transcriber.transcribe(audio_path)
-                st.session_state.full_transcript = " ".join(
-                    [s["text"] for s in audio_chunks]
-                )
+                st.session_state.full_transcript = " ".join([s["text"] for s in audio_chunks])
 
-                status.write(
-                    f"💾 Guardando {len(audio_chunks)} fragmentos de audio en Qdrant..."
-                )
+                status.write(f"💾 Guardando {len(audio_chunks)} fragmentos de audio en Qdrant...")
                 db.upsert_chunks(audio_chunks, process_id)
 
                 # D. VISUAL PROCESSING
                 status.write("👁️ Analizando Vídeo (OCR / Pantalla)...")
                 # Interval 5s for HIGH RESOLUTION scanning (Fixes the missed code issue)
-                visual_chunks = visual_service.process_video(
-                    video_path, process_id, interval=5
-                )
+                visual_chunks = visual_service.process_video(video_path, process_id, interval=5)
 
                 if visual_chunks:
                     status.write(
@@ -194,9 +182,7 @@ with st.sidebar:
                 else:
                     status.write("⚠️ No se detectó texto relevante en el vídeo.")
 
-                status.update(
-                    label="✅ Ingesta Multimodal Completada", state="complete"
-                )
+                status.update(label="✅ Ingesta Multimodal Completada", state="complete")
                 st.session_state.video_key = str(uuid.uuid4())
 
         else:
@@ -259,7 +245,7 @@ for i, message in enumerate(st.session_state.messages):
                         st.code(seg.get("text", "")[:60] + "...", language="text")
                     else:
                         st.markdown(f"**🎙️ Audio ({time_label})**")
-                        st.info(f"\"{seg.get('text', '')[:80]}...\"")
+                        st.info(f'"{seg.get("text", "")[:80]}..."')
 
                     if st.button(
                         f"▶ Ir al min {time_label}",
@@ -271,11 +257,7 @@ for i, message in enumerate(st.session_state.messages):
 # Chat Input
 if prompt := st.chat_input("Pregunta sobre el vídeo..."):
     # FIX FOR MYPY: Ensure explicit string type
-    query_id = (
-        "web_download"
-        if input_id and input_id.startswith("http")
-        else str(input_id or "")
-    )
+    query_id = "web_download" if input_id and input_id.startswith("http") else str(input_id or "")
 
     if not query_id:
         st.toast("⚠️ Primero procesa un vídeo.", icon="🚨")
@@ -305,12 +287,10 @@ if prompt := st.chat_input("Pregunta sobre el vídeo..."):
                                 frame_path = seg.get("frame_path")
                                 if frame_path and os.path.exists(frame_path):
                                     st.image(frame_path, use_container_width=True)
-                                st.code(
-                                    seg.get("text", "")[:60] + "...", language="text"
-                                )
+                                st.code(seg.get("text", "")[:60] + "...", language="text")
                             else:
                                 st.markdown(f"**🎙️ Audio ({time_label})**")
-                                st.info(f"\"{seg.get('text', '')[:80]}...\"")
+                                st.info(f'"{seg.get("text", "")[:80]}..."')
 
                             if st.button(
                                 f"▶ Ir al min {time_label}",
@@ -319,6 +299,4 @@ if prompt := st.chat_input("Pregunta sobre el vídeo..."):
                             ):
                                 seek_video(seg["start"])
 
-        st.session_state.messages.append(
-            {"role": "assistant", "content": answer, "sources": sources}
-        )
+        st.session_state.messages.append({"role": "assistant", "content": answer, "sources": sources})
