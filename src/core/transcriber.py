@@ -27,13 +27,9 @@ class VideoTranscriber:
         )
 
         # Initialize the model once (Singleton pattern)
-        self.model = WhisperModel(
-            self.model_size, device=self.device, compute_type=self.compute_type
-        )
+        self.model = WhisperModel(self.model_size, device=self.device, compute_type=self.compute_type)
 
-    def download_audio(
-        self, youtube_url: str, output_path: str = "data/tmp"
-    ) -> tuple[str, str]:
+    def download_audio(self, youtube_url: str, output_path: str = "data/tmp") -> tuple[str, str]:
         """
         Downloads the best available audio from a YouTube URL.
         """
@@ -107,9 +103,7 @@ class VideoTranscriber:
         # CRITICAL: We preserve start/end times here for the RAG citation feature later.
         # Citation feature is key. It may make it harder but it's a must.
         for segment in segments:
-            results.append(
-                {"start": segment.start, "end": segment.end, "text": segment.text}
-            )
+            results.append({"start": segment.start, "end": segment.end, "text": segment.text})
             # Real-time feedback in console
             print(f"[{segment.start:.2f}s -> {segment.end:.2f}s] {segment.text}")
 

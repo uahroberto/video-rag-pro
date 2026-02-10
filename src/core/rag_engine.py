@@ -64,9 +64,7 @@ class RAGEngine:
 
         future_video = None
         if include_visuals:
-            future_video = loop.run_in_executor(
-                self.executor, self._download_video_best, youtube_url
-            )
+            future_video = loop.run_in_executor(self.executor, self._download_video_best, youtube_url)
 
         print("⏳ Waiting for downloads...")
         if future_video:
@@ -82,17 +80,13 @@ class RAGEngine:
         # task_audio: Transcribe Audio
         # task_visual: Process Video Frames (OCR) - Now fully parallelized internally
 
-        task_audio = loop.run_in_executor(
-            self.executor, self._process_audio_task, audio_path
-        )
+        task_audio = loop.run_in_executor(self.executor, self._process_audio_task, audio_path)
 
         task_visual = None
         if include_visuals and video_path:
             # We run _process_video_task in the executor to avoid blocking the loop
             # during the frame extraction phase, even though it spawns its own tasks.
-            task_visual = loop.run_in_executor(
-                self.executor, self._process_video_task, video_path
-            )
+            task_visual = loop.run_in_executor(self.executor, self._process_video_task, video_path)
 
         # Wait for both to complete
         if task_visual:
@@ -107,9 +101,7 @@ class RAGEngine:
 
         video_id = youtube_url.split("v=")[-1].split("&")[0]
         video_id = youtube_url.split("v=")[-1].split("&")[0]
-        await loop.run_in_executor(
-            self.executor, self.db.upsert_chunks, all_chunks, video_id
-        )
+        await loop.run_in_executor(self.executor, self.db.upsert_chunks, all_chunks, video_id)
         print("✅ Ingestion Complete!")
 
         return video_path, audio_path, video_title
@@ -150,9 +142,7 @@ class RAGEngine:
         step_seconds = 15
         step_frames = int(fps * step_seconds)
 
-        current_frame_pos = (
-            0  # Use a different name to avoid confusion with frame_count
-        )
+        current_frame_pos = 0  # Use a different name to avoid confusion with frame_count
         last_processed_frame_hash = None
 
         # Store tasks for Phase 2
@@ -274,8 +264,7 @@ class RAGEngine:
         # FIX: Force h264 (avc1) codec to ensure OpenCV compatibility.
         # AV1 (av01) or VP9 often fail on systems without HW acceleration
         ydl_opts = {
-            "format": "bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/"
-            "best[ext=mp4]/best",
+            "format": "bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[ext=mp4]/best",
             "outtmpl": "data/videos/%(id)s.%(ext)s",
             "quiet": True,
             "no_warnings": True,
@@ -284,9 +273,7 @@ class RAGEngine:
             info = ydl.extract_info(url, download=True)
             return ydl.prepare_filename(info)
 
-    def answer_question(
-        self, question: str, video_id: str
-    ) -> tuple[str, list[Dict[str, Any]]]:
+    def answer_question(self, question: str, video_id: str) -> tuple[str, list[Dict[str, Any]]]:
         """
         Main logic: Retrieve chunks, build context, and generate a cited answer.
         Handles both text/audio segments and visual/OCR segments.
@@ -298,17 +285,12 @@ class RAGEngine:
         # TUNING: Increased limit from 5 to 10 to handle multi-part questions better.
         # This ensures we get context for "Question A & B" if they are far apart.
         raw_context_segments = self.db.search(question, limit=15, video_id=video_id)
-        print(
-            f"🔎 Raw segments found: {len(raw_context_segments)} for video {video_id}"
-        )
+        print(f"🔎 Raw segments found: {len(raw_context_segments)} for video {video_id}")
 
         # DEBUG: Inspect the first few results to confirm visual data presence
         for idx, seg in enumerate(raw_context_segments[:5]):
             source_type = seg.get("type", "unknown")
-            print(
-                f"  [{idx}] {source_type.upper()} "
-                f"{seg['start']}s: {seg['text'][:50]}..."
-            )
+            print(f"  [{idx}] {source_type.upper()} {seg['start']}s: {seg['text'][:50]}...")
 
         if not raw_context_segments:
             return "No encontré información relevante en el vídeo.", []
@@ -371,10 +353,7 @@ class RAGEngine:
             "4. UNKNOWN: If the answer is not in the context, say you don't know."
         )
 
-        user_prompt = (
-            f"User Question: {question}\n\n"
-            f"Video Content (XML Structured):\n{context_text}"
-        )
+        user_prompt = f"User Question: {question}\n\nVideo Content (XML Structured):\n{context_text}"
 
         # 4. GENERATION: Call OpenAI API
         response = self.client.chat.completions.create(

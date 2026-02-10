@@ -11,7 +11,6 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 # --- IMPORTS ---
-# Añadimos '# noqa: E402' para decir al linter: "Ignora esto, sé lo que hago"
 from src.core.transcriber import VideoTranscriber  # noqa: E402
 from src.database.vector_store import VectorDatabase  # noqa: E402
 from src.core.rag_engine import RAGEngine  # noqa: E402
