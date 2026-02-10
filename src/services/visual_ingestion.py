@@ -8,9 +8,7 @@ from src.video_processing.frame_extractor import extract_frames
 from src.video_processing.ocr_service import OCRService
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +20,7 @@ class VisualIngestionService:
     3. Structures data for Qdrant ingestion.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initializes the service with necessary sub-components.
         """
@@ -60,9 +58,7 @@ class VisualIngestionService:
         logger.info(f"🎬 Starting visual ingestion for video: {video_id}")
 
         # 1. Extraction Phase: Get images from video
-        frame_paths = extract_frames(
-            video_path, self.frames_base_dir, interval_seconds=interval
-        )
+        frame_paths = extract_frames(video_path, self.frames_base_dir, interval_seconds=interval)
 
         if not frame_paths:
             logger.warning("No frames extracted. Check video path or codec.")
@@ -98,7 +94,8 @@ class VisualIngestionService:
             visual_documents.append(doc)
 
         logger.info(
-            f"✅ Visual processing complete. Generated {len(visual_documents)} searchable visual chunks."
+            f"✅ Visual processing complete. "
+            f"Generated {len(visual_documents)} searchable visual chunks."
         )
         return visual_documents
 
@@ -133,7 +130,7 @@ if __name__ == "__main__":
         print("\n--- SAMPLE VISUAL CHUNKS (Ready for Qdrant) ---")
         # Display the first 3 chunks to verify structure
         for i, doc in enumerate(docs[:3]):
-            print(f"Chunk #{i+1} (Time: {doc['metadata']['timestamp']}s):")
+            print(f"Chunk #{i + 1} (Time: {doc['metadata']['timestamp']}s):")
             print(f"Text Preview: {doc['page_content'][:100]}...")
             print("-" * 20)
     else:
