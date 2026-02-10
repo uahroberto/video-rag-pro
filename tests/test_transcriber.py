@@ -23,9 +23,7 @@ class TestVideoTranscriber(unittest.TestCase):
             "id": "test_id",
             "title": "Test Title",
         }
-        mock_instance.prepare_filename.return_value = (
-            "data/tmp/test_id.mp3"  # Simulated path
-        )
+        mock_instance.prepare_filename.return_value = "data/tmp/test_id.mp3"  # Simulated path
 
         # This method in source uses 'output_path' argument for directory,
         # but internal logic might construct filename.

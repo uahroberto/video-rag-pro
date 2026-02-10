@@ -55,7 +55,5 @@ class ChunkingProcessor:
 
             i += 1
 
-        print(
-            f"📦 Grouped {len(segments)} segments into {len(chunks)} contextual chunks."
-        )
+        print(f"📦 Grouped {len(segments)} segments into {len(chunks)} contextual chunks.")
         return chunks

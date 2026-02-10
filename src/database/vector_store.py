@@ -38,9 +38,7 @@ class VectorDatabase:
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config={
-                    "text-dense": models.VectorParams(
-                        size=384, distance=models.Distance.COSINE
-                    )
+                    "text-dense": models.VectorParams(size=384, distance=models.Distance.COSINE)
                 },
                 sparse_vectors_config={
                     "text-sparse": models.SparseVectorParams(
@@ -140,11 +138,7 @@ class VectorDatabase:
         query_filter = None
         if video_id:
             query_filter = models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="video_id", match=models.MatchValue(value=video_id)
-                    )
-                ]
+                must=[models.FieldCondition(key="video_id", match=models.MatchValue(value=video_id))]
             )
 
         search_result = self.client.query_points(

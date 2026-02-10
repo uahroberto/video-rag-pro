@@ -52,9 +52,7 @@ class TestVisualPrompt(unittest.TestCase):
         # We mock the response to avoid actual API calls,
         # but we check the call arguments
         mock_response = MagicMock()
-        mock_response.choices[
-            0
-        ].message.content = "The variable is `MAX_RETRIES` set to 5."
+        mock_response.choices[0].message.content = "The variable is `MAX_RETRIES` set to 5."
         self.rag.client.chat.completions.create.return_value = mock_response
 
         # 3. Method Call
@@ -84,17 +82,13 @@ class TestVisualPrompt(unittest.TestCase):
         )
 
         # Check Context Injection Formatting (XML-like)
-        self.assertIn(
-            "<context_slice", user_msg, "User prompt should use XML-like context tags"
-        )
+        self.assertIn("<context_slice", user_msg, "User prompt should use XML-like context tags")
         self.assertIn(
             "<source_type>VISUAL</source_type>",
             user_msg,
             "Visual sources should be explicitly tagged",
         )
-        self.assertIn(
-            "const MAX_RETRIES = 5;", user_msg, "The visual content should be present"
-        )
+        self.assertIn("const MAX_RETRIES = 5;", user_msg, "The visual content should be present")
 
 
 if __name__ == "__main__":

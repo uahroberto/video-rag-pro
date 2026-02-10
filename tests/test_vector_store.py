@@ -13,9 +13,7 @@ class TestVectorDatabase(unittest.TestCase):
         self.MockQdrant.return_value.query_points.return_value.points = []
 
         self.patcher_fastembed = patch("src.database.vector_store.SparseTextEmbedding")
-        self.MockFastEmbed = patch(
-            "src.database.vector_store.SparseTextEmbedding"
-        ).start()
+        self.MockFastEmbed = patch("src.database.vector_store.SparseTextEmbedding").start()
 
         self.patcher_sentence = patch("src.database.vector_store.SentenceTransformer")
         self.MockSentence = self.patcher_sentence.start()
@@ -78,9 +76,7 @@ class TestVectorDatabase(unittest.TestCase):
 
         # Retrieve the filter from the first prefetch
         actual_filter = prefetches[0].filter
-        self.assertIsNotNone(
-            actual_filter, "Filter should not be None when video_id is provided"
-        )
+        self.assertIsNotNone(actual_filter, "Filter should not be None when video_id is provided")
 
         # We can inspect the filter structure if we want deep verification,
         # but verifying it's not None and passed is a good start.

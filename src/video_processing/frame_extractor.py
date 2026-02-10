@@ -4,15 +4,11 @@ import logging  # Logging for debugging and monitoring
 from typing import List  # Type hinting for better code readability
 
 # Setup logging configuration
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def extract_frames(
-    video_path: str, output_dir: str, interval_seconds: int = 30
-) -> List[str]:
+def extract_frames(video_path: str, output_dir: str, interval_seconds: int = 30) -> List[str]:
     """
     Extracts frames from a video file at fixed intervals using a seeking strategy.
 
@@ -42,9 +38,7 @@ def extract_frames(
     # 2. Load Video Resource
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        logger.error(
-            "No se pudo abrir el archivo de video (Codec error o archivo corrupto)."
-        )
+        logger.error("No se pudo abrir el archivo de video (Codec error o archivo corrupto).")
         return []
 
     # 3. Key Metadata Extraction
@@ -61,10 +55,8 @@ def extract_frames(
         cap.release()
         return []
 
-    logger.info(f"Procesando: {video_name} | Duración: {duration/60:.2f} min")
-    logger.info(
-        f"Estrategia: Extracción cada {interval_seconds}s (salto de {frame_step} frames)"
-    )
+    logger.info(f"Procesando: {video_name} | Duración: {duration / 60:.2f} min")
+    logger.info(f"Estrategia: Extracción cada {interval_seconds}s (salto de {frame_step} frames)")
 
     saved_files = []
     current_frame = 0

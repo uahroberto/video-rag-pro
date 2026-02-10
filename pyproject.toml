@@ -1,64 +1,78 @@
+[tool.poetry]
+name = "video-rag-pro"
+version = "0.1.0"
+description = "Video RAG Professional Engine"
+authors = ["Roberto <tu_email@ejemplo.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+openai = "^1.12.0"
+python-dotenv = "^1.0.1"
+qdrant-client = "^1.7.3"
+sentence-transformers = "^2.3.1"
+fastembed = "^0.2.0"
+streamlit = "^1.31.1"
+yt-dlp = "^2023.11.16"
+faster-whisper = "^1.0.0"
+opencv-python = "^4.9.0.80"
+numpy = "^1.26.4"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.3.0"
+mypy = "^1.8.0"
+pytest = "^8.0.0"
+types-requests = "^2.31.0"
+
+# --- CONFIGURACIÓN DE RUFF (LINTING & FORMATTING) ---
 [tool.ruff]
-# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+# Configuración Global
+line-length = 102
+indent-width = 4
+target-version = "py311"
+
+# Carpetas a ignorar (Aquí es donde daba el error de .git antes)
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "__pypackages__",
+]
+
+[tool.ruff.lint]
+# Reglas activas: E (Error), F (Pyflakes)
 select = ["E", "F"]
 ignore = []
 
-# Allow autofix for all enabled rules (when `--fix`) is provided.
-fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
+# Permitir arreglar todo automáticamente
+fixable = ["ALL"]
 unfixable = []
 
-# Exclude a variety of commonly ignored directories.
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".git-rewrite",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
-]
+[tool.ruff.lint.per-file-ignores]
+# Ignorar líneas largas solo en los tests
+"tests/*" = ["E501"]
 
-line-length = 88
-
-[tool.ruff.mccabe]
-# Unlike Flake8, default to a complexity level of 10.
-max-complexity = 10
-
+# --- CONFIGURACIÓN DE MYPY (TYPE CHECKING) ---
 [tool.mypy]
-# Global options
 python_version = "3.11"
+# EXCLUSIÓN IMPORTANTE: MyPy no mirará la carpeta tests
+exclude = ["tests"]
+
+# Reglas estrictas para el código real
 check_untyped_defs = true
 disallow_any_generics = true
-disallow_untyped_calls = false  # Relaxed for rapid development integration
 disallow_untyped_defs = true
 ignore_missing_imports = true
 no_implicit_optional = true
 show_error_codes = true
 strict_equality = true
 warn_redundant_casts = true
-warn_return_any = false # Relaxed
+warn_return_any = false
 warn_unreachable = true
 warn_unused_configs = true
-warn_unused_ignores = true
 
-# Execeptions for the tests
 [[tool.mypy.overrides]]
 module = "tests.*"
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-check_untyped_defs = false
 ignore_errors = true
